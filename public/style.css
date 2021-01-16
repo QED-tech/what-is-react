@@ -1,0 +1,42 @@
+:root {
+    --middle-gap: 30px;
+}
+
+
+.header > .container {
+    display: flex;
+    align-items: center;
+}
+
+.clock {
+    font-size: 22px;
+    margin-left: var(--middle-gap);
+}
+
+.logo {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+}
+
+.lots {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+
+    margin-top: var(--middle-gap);
+}
+
+.lot {
+    flex: 33%;
+    min-width: 33%;
+    border-bottom: 1px solid #eee;
+}
+
+.lot-name {
+    text-transform: capitalize;
+}
+
+.price-small {
+    color: #8f1a3b;
+}
