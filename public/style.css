@@ -40,3 +40,9 @@
 .price-small {
     color: #8f1a3b;
 }
+
+.loading {
+    padding: 30px;
+    border-radius: 5px;
+    background-color: #d9d8d8;
+}

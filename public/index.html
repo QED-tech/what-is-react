@@ -16,30 +16,60 @@
 
 <script>
 
-    const state = {
-        time: new Date(),
-        lots: [
-            {
-                id: 1,
-                name: "apple",
-                description: "Apple description",
-                price: 15
-            },
-            {
-                id: 2,
-                name: "orange",
-                description: "Orange description",
-                price: 33
-            },
-            {
-                id: 3,
-                name: "mango",
-                description: "Mango description",
-                price: 22
+    const api = {
+        get(url) {
+            switch (url) {
+                case '/lots':
+                    return new Promise((resolve) => {
+                        resolve([
+                            {
+                                id: 1,
+                                name: "apple",
+                                description: "Apple description",
+                                price: 15
+                            },
+                            {
+                                id: 2,
+                                name: "orange",
+                                description: "Orange description",
+                                price: 33
+                            },
+                            {
+                                id: 3,
+                                name: "mango",
+                                description: "Mango description",
+                                price: 22
+                            }
+                        ])
+                    })
+                default:
+                    throw new Error('Url not found');
             }
-        ]
+        }
     }
 
+
+    //##############################
+    let state = {
+        time: new Date(),
+    }
+    //##############################
+
+    const stream = {
+        subscribe(channel, listener) {
+            const match = /price-(\d+)/.exec(channel)
+            if (match) {
+                setInterval(() => {
+                    listener({
+                        id: +match[1],
+                        price: Math.round(Math.random() * 10 + 30)
+                    })
+                }, 1400)
+            }
+        }
+    }
+
+    //##############################
     const Container = () => {
         const node = document.createElement('div')
         node.className = "container"
@@ -64,14 +94,14 @@
         return node
     }
 
-    const Clock = ({time}) => {
+    const Clock = ({ time }) => {
         const node = document.createElement('div')
         node.className = "clock"
         node.innerText = time.toLocaleTimeString()
         return node
     }
 
-    const App = ({state}) => {
+    const App = ({ state }) => {
         const App = document.createElement('div')
         const container = Container()
 
@@ -83,7 +113,15 @@
         return App
     }
 
-    const Lots = ({lots}) => {
+    const Lots = ({ lots }) => {
+        const node = document.createElement('div')
+
+        if (lots === undefined) {
+            node.innerHTML = 'Загрузка...'
+            node.className = 'loading'
+            return node
+        }
+
         let html = '';
         lots.forEach(item => {
             html += `
@@ -94,16 +132,60 @@
             </article>
             `
         })
-        const node = document.createElement('div')
+
         node.className = 'lots'
         node.innerHTML = html
         return node
     }
 
 
-    Render(
-        App({state}), document.getElementById('root')
-    )
+    const renderView = (state) => {
+        document.getElementById('root').innerHTML = ''
+        Render(
+            App({ state }), document.getElementById('root')
+        )
+    }
+
+    renderView(state)
+    //##############################
+
+    api.get('/lots').then((lots) => {
+        state = {
+            ...state,
+            lots
+        }
+
+        const onPrice = (data) => {
+            state = {
+                ...state,
+                lots: state.lots.map((lot) => {
+                    if (lot.id === data.id) {
+                        return {
+                            ...lot,
+                            price: data.price
+                        }
+                    }
+                    return lot
+                })
+            }
+        }
+
+        lots.forEach((lot) => {
+            stream.subscribe(`price-${lot.id}`, onPrice)
+        })
+    })
+
+
+    //##############################
+    setInterval(() => {
+        state = {
+            ...state,
+            time: new Date()
+        }
+
+        renderView(state)
+    }, 1000)
+    //##############################
 </script>
 
 </body>
