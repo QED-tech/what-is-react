@@ -53,281 +53,76 @@ const stream = {
 }
 
 //##############################
-const Container = (props) => {
-    return {
-        type: 'div',
-        props: {
-            ...props,
-            className: 'container'
-        }
-    }
-}
 
-
-const Header = (state) => {
-    return {
-        type: 'header',
-        props: {
-            className: 'header',
-            children: [
-                {
-                    type: Container,
-                    props: {
-                        children: [
-                            {
-                                type: Logo,
-                                props: {}
-                            },
-                            {
-                                type: Clock,
-                                props: { time: state.time }
-                            }
-                        ]
-                    }
-                },
-
-            ]
-        }
-    }
+const Header = () => {
+    return (
+        <header className="header">
+            <div className="container">
+                <Logo/>
+            </div>
+        </header>
+    )
 }
 
 const Logo = () => {
-    return {
-        type: 'img',
-        props: {
-            className: 'logo',
-            src: "https://st2.depositphotos.com/1496387/8556/v/950/depositphotos_85563812-stock-illustration-food-vector-logo-design-template.jpg",
-        }
-    }
-
+    return <img className="logo" src="logo.jpg" alt=""/>
 }
 
 const Clock = ({ time }) => {
     const isDay = time.getHours() >= 7 && time.getHours() <= 21
 
-    return {
-        type: 'div',
-        props: {
-            className: 'clock',
-            children: [
-                {
-                    type: 'span',
-                    props: {
-                        className: 'value',
-                        children: [
-                            time.toLocaleTimeString()
-                        ]
-                    }
-                },
-                {
-                    type: 'span',
-                    props: {
-                        className: isDay ? 'icon day' : 'icon night',
-                    }
-                }
-            ]
-        }
-    }
+    return (
+        <div className="clock">
+            <span className="value">{time.toLocaleTimeString()}</span>
+            <span className={isDay ? 'icon day' : 'icon night'}/>
+        </div>
+    )
 }
 
 const App = ({ state }) => {
-    return {
-        type: 'div',
-        props: {
-            className: 'app',
-            children: [
-                {
-                    type: Header,
-                    props: { time: state.time }
-                },
-                {
-                    type: Container,
-                    props: {
-                        children: [
-                            {
-                                type: Lots,
-                                props: { lots: state.lots }
-                            }
-                        ]
-                    }
-                }
-            ]
-        }
-    }
+    return (
+        <div className="app">
+            <Header/>
+            <div className="container">
+                <Clock time={state.time}/>
+                <Lots lots={state.lots}/>
+            </div>
+        </div>
+    )
 }
 
 function Loading() {
-    return {
-        type: 'div',
-        props: {
-            className: 'loading',
-            children: [
-                'Loading...'
-            ]
-        }
-    }
+    return <div className="loading">Loading...</div>
 }
 
 const Lots = ({ lots }) => {
-    if (lots === null || lots === undefined) {
-        return {
-            type: Loading,
-            props: {}
-        }
+    if (lots === null) {
+        return <Loading/>
     }
 
-    return {
-        type: 'div',
-        props: {
-            className: 'lots',
-            children: lots.map((lot) => ({
-                type: Lot,
-                props: { lot }
-            }))
-        }
-    }
+    return (
+        <div className="lots">
+            {lots.map((lot) => <Lot lot={lot} key={lot.id}/>)}
+        </div>
+    )
 }
 
 function Lot({ lot }) {
-    return {
-        type: 'article',
-        key: lot.id,
-        props: {
-            className: 'lot',
-            children: [
-                {
-                    type: 'div',
-                    props: {
-                        className: 'price',
-                        children: [
-                            lot.price
-                        ]
-                    },
-                },
-                {
-                    type: 'h1',
-                    props: {
-                        children: [
-                            lot.name
-                        ],
-                    },
-                },
-                {
-                    type: 'p',
-                    props: {
-                        children: [
-                            lot.description
-                        ],
-                    },
-                }
-            ],
-        }
-    }
-}
-
-
-const renderView = (state) => {
-    Render(
-        App({ state }), document.getElementById('root')
+    return (
+        <article className="lot">
+            <div className="price">{lot.price}</div>
+            <h1>{lot.name}</h1>
+            <p>{lot.description}</p>
+        </article>
     )
 }
 
 
-function createRealNodeByVirtual(virtual) {
-    if (typeof virtual !== 'object') {
-        return document.createTextNode('')
-    }
-    return document.createElement(virtual.type)
-}
-
-
-const Render = (virtualDom, realDomRoot) => {
-    const evaluatedVirtualDom = evaluate(virtualDom)
-
-    const virtualDomRoot = {
-        type: realDomRoot.tagName.toLowerCase(),
-        props: {
-            id: realDomRoot.id,
-            children: [
-                evaluatedVirtualDom
-            ]
-        },
-    }
-
-    sync(virtualDomRoot, realDomRoot)
-}
-
-function evaluate(virtualNode) {
-    if (typeof virtualNode !== 'object') {
-        return virtualNode
-    }
-
-    if (typeof virtualNode.type === 'function') {
-        return evaluate((virtualNode.type)(virtualNode.props))
-    }
-
-    const props = virtualNode.props || {}
-
-    return {
-        ...virtualNode,
-        props: {
-            ...props,
-            children: Array.isArray(props.children) ? props.children.map(evaluate) : [evaluate(props.children)]
-        }
-    }
-}
-
-function sync(virtualNode, realNode) {
-    // Sync element
-    if (virtualNode.props) {
-        Object.entries(virtualNode.props).forEach(([name, value]) => {
-            if (name === 'key' || name === 'children') {
-                return
-            }
-            if (realNode[name] !== value) {
-                realNode[name] = value
-            }
-        })
-    }
-    if (virtualNode.key) {
-        realNode.dataset.key = virtualNode.key
-    }
-    if (typeof virtualNode !== 'object' && virtualNode !== realNode.nodeValue) {
-        realNode.nodeValue = virtualNode
-    }
-
-    // Sync child nodes
-    const virtualChildren = virtualNode.props ? virtualNode.props.children || [] : []
-    const realChildren = realNode.childNodes
-
-    for (let i = 0; i < virtualChildren.length || i < realChildren.length; i++) {
-        const virtual = virtualChildren[i]
-        const real = realChildren[i]
-
-        // Remove
-        if (virtual === undefined && real !== undefined) {
-            realNode.remove(real)
-        }
-
-        // Update
-        if (virtual !== undefined && real !== undefined && (virtual.type || '') === (real.tagName || '').toLowerCase()) {
-            sync(virtual, real)
-        }
-
-        // Replace
-        if (virtual !== undefined && real !== undefined && (virtual.type || '') !== (real.tagName || '').toLowerCase()) {
-            const newReal = createRealNodeByVirtual(virtual)
-            sync(virtual, newReal)
-            realNode.replaceChild(newReal, real)
-        }
-
-        // Add
-        if (virtual !== undefined && real === undefined) {
-            const newReal = createRealNodeByVirtual(virtual)
-            sync(virtual, newReal)
-            realNode.appendChild(newReal)
-        }
-    }
+const renderView = (state) => {
+    ReactDOM.render(
+        <App state={state}/>,
+        document.getElementById('root')
+    )
 }
 
 
