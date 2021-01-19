@@ -3,26 +3,28 @@ const api = {
         switch (url) {
             case '/lots':
                 return new Promise((resolve) => {
-                    resolve([
-                        {
-                            id: 1,
-                            name: "apple",
-                            description: "Apple description",
-                            price: 15
-                        },
-                        {
-                            id: 2,
-                            name: "orange",
-                            description: "Orange description",
-                            price: 33
-                        },
-                        {
-                            id: 3,
-                            name: "mango",
-                            description: "Mango description",
-                            price: 22
-                        }
-                    ])
+                    setTimeout(() => {
+                        resolve([
+                            {
+                                id: 1,
+                                name: "apple",
+                                description: "Apple description",
+                                price: 15
+                            },
+                            {
+                                id: 2,
+                                name: "orange",
+                                description: "Orange description",
+                                price: 33
+                            },
+                            {
+                                id: 3,
+                                name: "mango",
+                                description: "Mango description",
+                                price: 22
+                            }
+                        ])
+                    }, 2000)
                 })
             default:
                 throw new Error('Url not found');
@@ -32,10 +34,37 @@ const api = {
 
 
 //##############################
-let state = {
+const initialState = {
     time: new Date(),
     lots: null
 }
+
+class Store {
+    constructor(initialState) {
+        this.state = initialState
+        this.listeners = []
+    }
+
+    getState() {
+        return this.state
+    }
+
+    subscribe(callback) {
+        this.listeners.push(callback)
+    }
+
+    changeState(diff) {
+        this.state = {
+            ...this.state,
+            ...(typeof diff === 'function' ? diff(this.state) : diff)
+        }
+        this.listeners.forEach((listener) => {
+            listener()
+        })
+    }
+}
+
+const store = new Store(initialState)
 //##############################
 
 const stream = {
@@ -110,7 +139,11 @@ const Lots = ({ lots }) => {
 function Lot({ lot }) {
     return (
         <article className="lot">
-            <div className="price">{lot.price}</div>
+            <div className="price">
+                <small className="price-small">price: </small>
+                $
+                {lot.price}
+            </div>
             <h1>{lot.name}</h1>
             <p>{lot.description}</p>
         </article>
@@ -125,19 +158,26 @@ const renderView = (state) => {
     )
 }
 
+store.subscribe(() => {
+    renderView(store.getState())
+})
 
-renderView(state)
+renderView(store.getState())
 //##############################
 
+setInterval(() => {
+    store.changeState({
+        time: new Date()
+    })
+}, 1000)
+
 api.get('/lots').then((lots) => {
-    state = {
-        ...state,
+    store.changeState({
         lots
-    }
+    })
 
     const onPrice = (data) => {
-        state = {
-            ...state,
+        store.changeState((state) => ({
             lots: state.lots.map((lot) => {
                 if (lot.id === data.id) {
                     return {
@@ -147,24 +187,12 @@ api.get('/lots').then((lots) => {
                 }
                 return lot
             })
-        }
+        }))
     }
 
     lots.forEach((lot) => {
         stream.subscribe(`price-${lot.id}`, onPrice)
     })
-
 })
-
-
-//##############################
-setInterval(() => {
-    state = {
-        ...state,
-        time: new Date()
-    }
-
-    renderView(state)
-}, 1000)
 //##############################
 

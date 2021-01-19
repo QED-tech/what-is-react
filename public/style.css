@@ -46,3 +46,11 @@
     border-radius: 5px;
     background-color: #d9d8d8;
 }
+
+.price {
+    font-size: 18px;
+}
+
+h1 {
+    text-transform: capitalize;
+}
