@@ -34,37 +34,84 @@ const api = {
 
 
 //##############################
-const initialState = {
-    time: new Date(),
+const clockInitialState = {
+    time: new Date()
+}
+
+const SET_TIME = 'SET_TIME'
+
+function clockReducer(state = clockInitialState, action) {
+    switch (action.type) {
+        case SET_TIME:
+            return {
+                ...state,
+                time: action.time
+            }
+        default:
+            return state
+    }
+}
+
+function setTime(time) {
+    return {
+        type: SET_TIME,
+        time
+    }
+}
+
+//##############################
+const auctionInitialState = {
     lots: null
 }
 
-class Store {
-    constructor(initialState) {
-        this.state = initialState
-        this.listeners = []
-    }
+const SET_LOTS = 'SET_LOTS'
+const CHANGE_LOT_PRICE = 'CHANGE_LOT_PRICE'
 
-    getState() {
-        return this.state
-    }
-
-    subscribe(callback) {
-        this.listeners.push(callback)
-    }
-
-    changeState(diff) {
-        this.state = {
-            ...this.state,
-            ...(typeof diff === 'function' ? diff(this.state) : diff)
-        }
-        this.listeners.forEach((listener) => {
-            listener()
-        })
+function auctionReducer(state = auctionInitialState, action) {
+    switch (action.type) {
+        case SET_LOTS:
+            return {
+                ...state,
+                lots: action.lots
+            }
+        case CHANGE_LOT_PRICE:
+            return {
+                ...state,
+                lots: state.lots.map((lot) => {
+                    if (lot.id === action.id) {
+                        return {
+                            ...lot,
+                            price: action.price
+                        }
+                    }
+                    return lot
+                })
+            }
+        default:
+            return state
     }
 }
 
-const store = new Store(initialState)
+function setLots(lots) {
+    return {
+        type: SET_LOTS,
+        lots
+    }
+}
+
+function changeLotPrice(id, price) {
+    return {
+        type: CHANGE_LOT_PRICE,
+        id,
+        price
+    }
+}
+
+//##############################`
+const store = Redux.createStore(Redux.combineReducers({
+    clock: clockReducer,
+    auction: auctionReducer
+}))
 //##############################
 
 const stream = {
@@ -113,8 +160,8 @@ const App = ({ state }) => {
         <div className="app">
             <Header/>
             <div className="container">
-                <Clock time={state.time}/>
-                <Lots lots={state.lots}/>
+                <Clock time={state.clock.time}/>
+                <Lots lots={state.auction.lots}/>
             </div>
         </div>
     )
@@ -166,32 +213,16 @@ renderView(store.getState())
 //##############################
 
 setInterval(() => {
-    store.changeState({
-        time: new Date()
-    })
+    store.dispatch(setTime(new Date()))
 }, 1000)
 
 api.get('/lots').then((lots) => {
-    store.changeState({
-        lots
-    })
-
-    const onPrice = (data) => {
-        store.changeState((state) => ({
-            lots: state.lots.map((lot) => {
-                if (lot.id === data.id) {
-                    return {
-                        ...lot,
-                        price: data.price
-                    }
-                }
-                return lot
-            })
-        }))
-    }
+    store.dispatch(setLots(lots))
 
     lots.forEach((lot) => {
-        stream.subscribe(`price-${lot.id}`, onPrice)
+        stream.subscribe(`price-${lot.id}`, (data) => {
+            store.dispatch(changeLotPrice(data.id, data.price))
+        })
     })
 })
 //##############################
