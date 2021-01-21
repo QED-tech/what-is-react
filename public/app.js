@@ -9,19 +9,22 @@ const api = {
                                 id: 1,
                                 name: "apple",
                                 description: "Apple description",
-                                price: 15
+                                price: 15,
+                                favorite: true
                             },
                             {
                                 id: 2,
                                 name: "orange",
                                 description: "Orange description",
-                                price: 33
+                                price: 33,
+                                favorite: false
                             },
                             {
                                 id: 3,
                                 name: "mango",
                                 description: "Mango description",
-                                price: 22
+                                price: 22,
+                                favorite: false
                             }
                         ])
                     }, 2000)
@@ -29,6 +32,23 @@ const api = {
             default:
                 throw new Error('Url not found');
         }
+    },
+    post(url) {
+        if (/^\/lots\/(\d+)\/favorite$/.exec(url)) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve({})
+                }, 500)
+            })
+        }
+        if (/^\/lots\/(\d+)\/unfavorite$/.exec(url)) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve({})
+                }, 500)
+            })
+        }
+        throw new Error('Unknown address')
     }
 }
 
@@ -66,6 +86,8 @@ const auctionInitialState = {
 
 const SET_LOTS = 'SET_LOTS'
 const CHANGE_LOT_PRICE = 'CHANGE_LOT_PRICE'
+const FAVORITE_LOT = 'FAVORITE_LOT'
+const UNFAVORITE_LOT = 'UNFAVORITE_LOT'
 
 function auctionReducer(state = auctionInitialState, action) {
     switch (action.type) {
@@ -82,6 +104,33 @@ function auctionReducer(state = auctionInitialState, action) {
                         return {
                             ...lot,
                             price: action.price
+                        }
+                    }
+                    return lot
+                })
+            }
+
+        case FAVORITE_LOT:
+            return {
+                ...state,
+                lots: state.lots.map((lot) => {
+                    if (lot.id === action.id) {
+                        return {
+                            ...lot,
+                            favorite: true
+                        }
+                    }
+                    return lot
+                })
+            }
+        case UNFAVORITE_LOT:
+            return {
+                ...state,
+                lots: state.lots.map((lot) => {
+                    if (lot.id === action.id) {
+                        return {
+                            ...lot,
+                            favorite: false
                         }
                     }
                     return lot
@@ -104,6 +153,20 @@ function changeLotPrice(id, price) {
         type: CHANGE_LOT_PRICE,
         id,
         price
+    }
+}
+
+function favoriteLot (id) {
+    return {
+        type: FAVORITE_LOT,
+        id
+    }
+}
+
+function unfavoriteLot (id) {
+    return {
+        type: UNFAVORITE_LOT,
+        id
     }
 }
 
@@ -155,13 +218,13 @@ const Clock = ({ time }) => {
     )
 }
 
-const App = ({ state }) => {
+const App = ({ state, favorite, unfavorite }) => {
     return (
         <div className="app">
             <Header/>
             <div className="container">
                 <Clock time={state.clock.time}/>
-                <Lots lots={state.auction.lots}/>
+                <Lots lots={state.auction.lots} favorite={favorite} unfavorite={unfavorite}/>
             </div>
         </div>
     )
@@ -171,21 +234,21 @@ function Loading() {
     return <div className="loading">Loading...</div>
 }
 
-const Lots = ({ lots }) => {
+const Lots = ({ lots, favorite, unfavorite }) => {
     if (lots === null) {
         return <Loading/>
     }
 
     return (
         <div className="lots">
-            {lots.map((lot) => <Lot lot={lot} key={lot.id}/>)}
+            {lots.map((lot) => <Lot lot={lot} favorite={favorite} unfavorite={unfavorite} key={lot.id} />)}
         </div>
     )
 }
 
-function Lot({ lot }) {
+function Lot({ lot, favorite, unfavorite }) {
     return (
-        <article className="lot">
+        <article className={'lot' + (lot.favorite ? ' favorite' : '')}>
             <div className="price">
                 <small className="price-small">price: </small>
                 $
@@ -193,23 +256,56 @@ function Lot({ lot }) {
             </div>
             <h1>{lot.name}</h1>
             <p>{lot.description}</p>
+            <Favorite
+                active={lot.favorite}
+                favorite={() => favorite(lot.id)}
+                unfavorite={() => unfavorite(lot.id)}
+            />
         </article>
     )
 }
 
+function Favorite ({ active, favorite, unfavorite }) {
+    return active ? (
+        <button type="button" onClick={unfavorite} className="unfavorite">
+            <ion-icon name="heart-sharp" /> Unfavorite
+        </button>
+    ) : (
+        <button type="button" onClick={favorite} className="favorite">
+            <ion-icon name="heart-outline" /> Favorite
+        </button>
+    )
+}
 
-const renderView = (state) => {
+
+const renderView = (store) => {
+
+    const state = store.getState()
+
+    const favorite = (id) => {
+        api.post(`/lots/${id}/favorite`).then(() => {
+            store.dispatch(favoriteLot(id))
+        })
+    }
+
+    const unfavorite = (id) => {
+        api.post(`/lots/${id}/unfavorite`).then(() => {
+            store.dispatch(unfavoriteLot(id))
+        })
+    }
+
+
     ReactDOM.render(
-        <App state={state}/>,
+        <App state={state} favorite={favorite} unfavorite={unfavorite}/>,
         document.getElementById('root')
     )
 }
 
 store.subscribe(() => {
-    renderView(store.getState())
+    renderView(store)
 })
 
-renderView(store.getState())
+renderView(store)
 //##############################
 
 setInterval(() => {

@@ -28,9 +28,58 @@
 }
 
 .lot {
-    flex: 33%;
-    min-width: 33%;
-    border-bottom: 1px solid #eee;
+    flex: 30%;
+    min-width: calc(33% - 20px);
+    margin: 0 10px;
+    padding: 10px;
+
+    border: 1px solid #eee;
+    border-radius: 5px;
+
+}
+
+.lot.favorite {
+    border-color: #ffd7cb;
+    background: #ffd7cb;
+}
+
+button {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 0.8rem;
+    outline: none;
+}
+
+button:disabled {
+    cursor: wait;
+}
+
+button * {
+    vertical-align: middle;
+}
+
+button.favorite {
+    background: #fff;
+    border: 1px solid #999;
+    color: #000;
+}
+
+button.favorite:disabled {
+    background: #fff;
+    border: 1px solid #ccc;
+    color: #ccc;
+}
+
+button.unfavorite {
+    background: #fff;
+    border: 1px solid #ff8c68;
+    color: #dc0000;
+}
+
+button.unfavorite:disabled {
+    border: 1px solid #ffc0ad;
+    color: #ff8c68;
 }
 
 .lot-name {
