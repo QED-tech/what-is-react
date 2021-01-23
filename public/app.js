@@ -156,14 +156,14 @@ function changeLotPrice(id, price) {
     }
 }
 
-function favoriteLot (id) {
+function favoriteLot(id) {
     return {
         type: FAVORITE_LOT,
         id
     }
 }
 
-function unfavoriteLot (id) {
+function unfavoriteLot(id) {
     return {
         type: UNFAVORITE_LOT,
         id
@@ -175,7 +175,12 @@ const store = Redux.createStore(Redux.combineReducers({
     clock: clockReducer,
     auction: auctionReducer
 }))
-//##############################
+
+// ##########################
+
+const StoreContext = React.createContext()
+
+// ##########################
 
 const stream = {
     subscribe(channel, listener) {
@@ -207,6 +212,32 @@ const Logo = () => {
     return <img className="logo" src="logo.jpg" alt=""/>
 }
 
+const App = () => {
+
+    return (
+        <div className="app">
+            <Header/>
+            <div className="container">
+                <ClockConnected/>
+                <LotsConnected/>
+            </div>
+        </div>
+    )
+}
+
+function ClockConnected () {
+    return (
+        <StoreContext.Consumer>
+            {(store) => {
+                const state = store.getState()
+                const time = state.clock.time
+
+                return <Clock time={time} />
+            }}
+        </StoreContext.Consumer>
+    )
+}
+
 const Clock = ({ time }) => {
     const isDay = time.getHours() >= 7 && time.getHours() <= 21
 
@@ -218,42 +249,64 @@ const Clock = ({ time }) => {
     )
 }
 
-const App = ({ state, favorite, unfavorite }) => {
-    return (
-        <div className="app">
-            <Header/>
-            <div className="container">
-                <Clock time={state.clock.time}/>
-                <Lots lots={state.auction.lots} favorite={favorite} unfavorite={unfavorite}/>
-            </div>
-        </div>
-    )
-}
 
 function Loading() {
     return <div className="loading">Loading...</div>
 }
 
-const Lots = ({ lots, favorite, unfavorite }) => {
+function LotsConnected () {
+    return (
+        <StoreContext.Consumer>
+            {(store) => {
+                const state = store.getState()
+                const lots = state.auction.lots
+
+                return <Lots lots={lots} />
+            }}
+        </StoreContext.Consumer>
+    )
+}
+
+function Lots ({ lots }) {
     if (lots === null) {
-        return <Loading/>
+        return <Loading />
     }
 
     return (
         <div className="lots">
-            {lots.map((lot) => <Lot lot={lot} favorite={favorite} unfavorite={unfavorite} key={lot.id} />)}
+            {lots.map((lot) => <LotConnected lot={lot} key={lot.id} />)}
         </div>
     )
 }
 
-function Lot({ lot, favorite, unfavorite }) {
+function LotConnected ({ lot }) {
+    return (
+        <StoreContext.Consumer>
+            {(store) => {
+                const dispatch = store.dispatch
+
+                const favorite = (id) => {
+                    api.post(`/lots/${id}/favorite`).then(() => {
+                        dispatch(favoriteLot(id))
+                    })
+                }
+
+                const unfavorite = (id) => {
+                    api.post(`/lots/${id}/unfavorite`).then(() => {
+                        dispatch(unfavoriteLot(id))
+                    })
+                }
+
+                return <Lot lot={lot} favorite={favorite} unfavorite={unfavorite} />
+            }}
+        </StoreContext.Consumer>
+    )
+}
+
+function Lot ({ lot, favorite, unfavorite }) {
     return (
         <article className={'lot' + (lot.favorite ? ' favorite' : '')}>
-            <div className="price">
-                <small className="price-small">price: </small>
-                $
-                {lot.price}
-            </div>
+            <div className="price">{lot.price}</div>
             <h1>{lot.name}</h1>
             <p>{lot.description}</p>
             <Favorite
@@ -278,25 +331,11 @@ function Favorite ({ active, favorite, unfavorite }) {
 }
 
 
-const renderView = (store) => {
-
-    const state = store.getState()
-
-    const favorite = (id) => {
-        api.post(`/lots/${id}/favorite`).then(() => {
-            store.dispatch(favoriteLot(id))
-        })
-    }
-
-    const unfavorite = (id) => {
-        api.post(`/lots/${id}/unfavorite`).then(() => {
-            store.dispatch(unfavoriteLot(id))
-        })
-    }
-
-
+function renderView (store) {
     ReactDOM.render(
-        <App state={state} favorite={favorite} unfavorite={unfavorite}/>,
+        <StoreContext.Provider value={store}>
+            <App />
+        </StoreContext.Provider>,
         document.getElementById('root')
     )
 }
