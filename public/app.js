@@ -163,6 +163,14 @@ function favoriteLot(id) {
     }
 }
 
+function favoriteLotAsync (id) {
+    return (dispatch, getState, { api }) => {
+        return api.post(`/lots/${id}/favorite`).then(() => {
+            dispatch(favoriteLot(id))
+        })
+    }
+}
+
 function unfavoriteLot(id) {
     return {
         type: UNFAVORITE_LOT,
@@ -170,17 +178,29 @@ function unfavoriteLot(id) {
     }
 }
 
+
+function unfavoriteLotAsync (id) {
+    return (dispatch, getState, { api }) => {
+        return api.post(`/lots/${id}/unfavorite`).then(() => {
+            dispatch(unfavoriteLot(id))
+        })
+    }
+}
+
 //##############################`
-const store = Redux.createStore(Redux.combineReducers({
-    clock: clockReducer,
-    auction: auctionReducer
-}))
+
+const thunk = ReduxThunk.default
+
+const store = Redux.createStore(
+    Redux.combineReducers({
+        clock: clockReducer,
+        auction: auctionReducer
+    }),
+    Redux.applyMiddleware(thunk.withExtraArgument({ api }))
+)
 
 // ##########################
 
-const StoreContext = React.createContext()
-
-// ##########################
 
 const stream = {
     subscribe(channel, listener) {
@@ -213,7 +233,6 @@ const Logo = () => {
 }
 
 const App = () => {
-
     return (
         <div className="app">
             <Header/>
@@ -225,18 +244,6 @@ const App = () => {
     )
 }
 
-function ClockConnected () {
-    return (
-        <StoreContext.Consumer>
-            {(store) => {
-                const state = store.getState()
-                const time = state.clock.time
-
-                return <Clock time={time} />
-            }}
-        </StoreContext.Consumer>
-    )
-}
 
 const Clock = ({ time }) => {
     const isDay = time.getHours() >= 7 && time.getHours() <= 21
@@ -248,24 +255,21 @@ const Clock = ({ time }) => {
         </div>
     )
 }
+const clockMapStateToProps = (state) => ({
+    time: state.clock.time
+})
 
+const ClockConnected = ReactRedux.connect(clockMapStateToProps)(Clock)
 
 function Loading() {
     return <div className="loading">Loading...</div>
 }
 
-function LotsConnected () {
-    return (
-        <StoreContext.Consumer>
-            {(store) => {
-                const state = store.getState()
-                const lots = state.auction.lots
+const lotsMapStateToProps = (state) => ({
+    lots: state.auction.lots
+})
 
-                return <Lots lots={lots} />
-            }}
-        </StoreContext.Consumer>
-    )
-}
+const LotsConnected = ReactRedux.connect(lotsMapStateToProps)(Lots)
 
 function Lots ({ lots }) {
     if (lots === null) {
@@ -279,29 +283,12 @@ function Lots ({ lots }) {
     )
 }
 
-function LotConnected ({ lot }) {
-    return (
-        <StoreContext.Consumer>
-            {(store) => {
-                const dispatch = store.dispatch
-
-                const favorite = (id) => {
-                    api.post(`/lots/${id}/favorite`).then(() => {
-                        dispatch(favoriteLot(id))
-                    })
-                }
-
-                const unfavorite = (id) => {
-                    api.post(`/lots/${id}/unfavorite`).then(() => {
-                        dispatch(unfavoriteLot(id))
-                    })
-                }
-
-                return <Lot lot={lot} favorite={favorite} unfavorite={unfavorite} />
-            }}
-        </StoreContext.Consumer>
-    )
+const lotMapDispatchToProps = {
+    favorite: favoriteLotAsync,
+    unfavorite: unfavoriteLotAsync
 }
+
+const LotConnected = ReactRedux.connect(null, lotMapDispatchToProps)(Lot)
 
 function Lot ({ lot, favorite, unfavorite }) {
     return (
@@ -330,21 +317,13 @@ function Favorite ({ active, favorite, unfavorite }) {
     )
 }
 
-
-function renderView (store) {
-    ReactDOM.render(
-        <StoreContext.Provider value={store}>
-            <App />
-        </StoreContext.Provider>,
-        document.getElementById('root')
-    )
-}
-
-store.subscribe(() => {
-    renderView(store)
-})
-
-renderView(store)
+//##############################
+ReactDOM.render(
+    <ReactRedux.Provider store={store}>
+        <App />
+    </ReactRedux.Provider>,
+    document.getElementById('root')
+)
 //##############################
 
 setInterval(() => {
